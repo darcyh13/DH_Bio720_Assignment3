@@ -1,0 +1,156 @@
+---
+title: "DH_Bio720_Assignment3"
+output: html_document
+---
+
+
+
+
+```{r}
+
+#read in csv 
+rna_counts <- read.csv("https://www.dropbox.com/s/gqu520cc6r7xjw4/eXpress_dm_counts.csv?dl=1",  stringsAsFactors=FALSE)
+#filter out genes with expression of 0
+rna_counts <-  rna_counts[apply(rna_counts!=0, 1, all),]
+#create row names 
+rna_countsgood <- rna_counts[ , -1]
+rownames(rna_countsgood) <- rna_counts[,1]
+#create matrix - will be handy for some questions
+rna_countsgood <- data.matrix(rna_countsgood, rownames.force = NA)
+
+```
+
+
+2) Create function that can calculate and output mean expression 
+```{r}
+#x argument is file and y argument is sample
+mean2 <- function(x, y, log2scale=TRUE) {
+  if (log2scale == TRUE) {
+    log2(mean(x[ , y ]))
+  } else {
+    mean(x[, y])
+  }
+}
+
+#show that function works with log2 and without
+mean2(rna_counts, "F101_lg_female_hdhorn", log2scale = FALSE)
+mean2(rna_counts, "F101_lg_female_hdhorn", log2scale = TRUE)
+
+#show that function works with different sample 
+
+mean2(rna_counts, "M120_sm_male_genitalia", log2scale = TRUE)
+
+```
+
+
+3) Use a loop to generate a vector of the mean expression value for each column 
+```{r}
+#change function to not require sample argument 
+
+mean3 <- function(x, log2scale=TRUE) {
+  if (log2scale == TRUE) {
+    log2(mean(x))
+  } else {
+    mean(x)
+  }
+}
+
+#create loop to generate mean expression for each column 
+system.time(for (i in 2:56){
+z <- mean3(rna_counts[ , i]) 
+d <- colnames(rna_counts)[i]
+print (paste(d,":", z))
+}
+)
+
+#observe patterns 
+sort(log2(colMeans(rna_countsgood)))
+
+```
+male_genitalia appears to have lower mean expression, compared to other tissues in the same males. In addition,  M180_lg_male_wings has the highest mean gene expression, while F196_sm_female_thxhorn has the lowest. I do not notice any major patterns for which individuals or tissues have the highest mean expression.
+
+4)Repeat above but using apply family function 
+```{r}
+
+system.time(samplecounts <- sapply(rna_counts[, 2:56], mean3))
+print(samplecounts)
+
+```
+A loop is slower than using the apply family function. 
+
+5)What is an easier way to do this? 
+```{r}
+
+#use packages R has
+colMeans(rna_countsgood)
+log2(colMeans(rna_countsgood))
+
+```
+
+6) Write function to get mean expression of given gene across samples 
+
+```{r}
+
+#create function
+mean4 <- function(x,y, log2scale=TRUE) {
+  if (log2scale == TRUE) {
+    log2(mean(x[ y, ]))
+  } else {
+    mean(x[ y,  ])
+  }
+}
+
+#Show that function works
+mean4(rna_countsgood, "FBpp0087248")
+
+#Use apply to show each gene 
+genecounts <- apply(rna_countsgood, 1, mean3)
+print(genecounts)
+
+```
+
+7) Calculate the mean expression for the subset of columns for large and small male head horns
+
+```{r}
+#create subset of large male head horns
+lg_male_hdhorn <- subset(rna_counts, select=c( "M125_lg_male_hdhorn", "M160_lg_male_hdhorn", "M180_lg_male_hdhorn","M257_lg_male_hdhorn"))
+
+#create subset of small head horns 
+sm_male_hdhorn <- subset(rna_counts, select=c("M120_sm_male_hdhorn",  "M171_sm_male_hdhorn", "M172_sm_male_hdhorn", "M200_sm_male_hdhorn"))
+
+#create row names 
+rownames(sm_male_hdhorn) <- rna_counts[,1]
+rownames(lg_male_hdhorn) <- rna_counts[,1]
+
+#gene counts
+genecounts_sm_male_hdhorn <- apply(sm_male_hdhorn, 1, mean3, log2scale = FALSE)
+genecounts_lg_male_hdhorn <- apply(lg_male_hdhorn, 1, mean3, log2scale = FALSE)
+
+#gene counts log2 
+genecounts_sm_male_hdhorn_log2 <- apply(sm_male_hdhorn, 1, mean3)
+genecounts_lg_male_hdhorn_log2 <- apply(lg_male_hdhorn, 1, mean3)
+
+#calculate difference 
+difference <-(genecounts_lg_male_hdhorn - genecounts_sm_male_hdhorn)
+differencelog2 <- (genecounts_lg_male_hdhorn_log2 - genecounts_sm_male_hdhorn_log2)
+
+```
+
+
+8) plot the mean expression of each gene and the difference in expression values
+```{r}
+#calculate avg gene expression
+avgexp <- (genecounts_lg_male_hdhorn + genecounts_sm_male_hdhorn) / 2 
+avgexplog2 <- (genecounts_lg_male_hdhorn_log2 + genecounts_sm_male_hdhorn_log2) / 2 
+
+
+plot(avgexp, difference, main = "Average Gene Expression vs Difference", xlab = "Gene Expression", ylab = "Genes Expression Difference")
+
+
+plot(avgexplog2, differencelog2, main = "Log2 Average Gene Expression vs Difference", xlab = "Avg Gene Expression", ylab = "Gene Expression Difference")
+
+```
+
+
+ 
+
